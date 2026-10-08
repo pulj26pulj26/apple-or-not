@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>教机器认苹果 · 感知机训练营</title>
+<style>
+  :root{
+    --cream:#FFF9EF; --ink:#33261A; --orange:#E8703A; --green:#3F7A5A;
+    --yellow:#F4B942; --gray:#8A7A66; --line:#EAD9BE; --soft:#F6EBD8; --red:#C0392B;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0;}
+  body{background:var(--cream); color:var(--ink);
+    font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif; min-height:100vh;}
+  .wrap{max-width:680px; margin:0 auto; padding:16px 14px 48px;}
+  .hidden{display:none !important;}
+  h1,h2,h3{margin:0;}
+  button{font-family:inherit; cursor:pointer; border:none;}
+  button:active{transform:scale(0.96); filter:brightness(0.95);}
+  .kicker{color:var(--orange); font-size:13px; letter-spacing:2px; font-weight:700;}
+  .big-btn{display:block; width:100%; padding:16px 18px; margin:10px 0; border-radius:16px;
+    font-size:18px; font-weight:700; color:#fff; background:var(--orange);
+    box-shadow:0 3px 0 #c65a2b; text-align:left; line-height:1.4;}
+  .big-btn .sub{display:block; font-size:13px; font-weight:400; opacity:.92; margin-top:4px;}
+  .big-btn.green{background:var(--green); box-shadow:0 3px 0 #2f5c43;}
+  .big-btn.yellow{background:var(--yellow); box-shadow:0 3px 0 #d19c2e; color:var(--ink);}
+  .card{background:#fff; border:2px solid var(--line); border-radius:16px; padding:14px 16px;}
+  .pill{display:inline-block; padding:4px 12px; border-radius:999px; font-size:13px; font-weight:700; color:#fff; background:var(--green);}
+  .pill.orange{background:var(--orange);}
+  .toast{position:fixed; left:50%; bottom:28px; transform:translateX(-50%); background:var(--ink);
+    color:#fff; padding:10px 18px; border-radius:999px; font-size:14px; opacity:0;
+    transition:opacity .25s; pointer-events:none; z-index:99; max-width:86%; text-align:center;}
+  .toast.show{opacity:1;}
+
+  /* 首页 */
+  .hero{text-align:center; padding:26px 8px 8px;}
+  .hero .emo{font-size:56px; line-height:1;}
+  .hero h1{font-size:30px; margin:12px 0 4px;}
+  .hero .tag{color:var(--gray); font-size:15px;}
+  .howto{margin-top:18px; font-size:14px; line-height:1.9;}
+  .howto b{color:var(--orange);}
+  .footer-note{text-align:center; color:var(--gray); font-size:12px; margin-top:18px; line-height:1.8;}
+
+  /* 训练场 */
+  .hud{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+  .hud .lvl{font-size:14px; font-weight:700; color:var(--gray);}
+  .robot-box{background:#fff; border:2px solid var(--line); border-radius:16px; padding:12px 16px; margin-bottom:10px;}
+  .robot-head{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+  .robot-face{font-size:34px;}
+  .robot-name{font-weight:700; font-size:15px;}
+  .robot-say{font-size:13px; color:var(--gray);}
+  .wbar-row{display:flex; align-items:center; gap:8px; margin:6px 0;}
+  .wbar-label{width:64px; font-size:13px; font-weight:700;}
+  .wbar{flex:1; height:14px; background:var(--soft); border-radius:999px; overflow:hidden; position:relative;}
+  .wbar i{display:block; height:100%; width:0%; background:var(--orange); border-radius:999px; transition:width .45s ease;}
+  .wbar-val{width:56px; font-size:13px; font-weight:700; color:var(--orange); transition:color .3s;}
+  .wbar-row.bump .wbar-val{color:var(--green); font-size:15px;}
+  .theta-row{display:flex; align-items:center; gap:8px; margin-top:8px; padding-top:8px; border-top:1.5px dashed var(--line);}
+  .theta-label{font-size:13px; font-weight:700; color:var(--gray);}
+  .theta-val{font-size:15px; font-weight:700; color:var(--green);}
+  .theta-note{font-size:12px; color:var(--gray);}
+
+  .fruit-card{background:#fff; border:2px solid var(--orange); border-radius:20px; padding:16px; text-align:center; margin:10px 0;}
+  .fruit-emo{font-size:64px; line-height:1.1;}
+  .fruit-name{font-size:20px; font-weight:700; margin:6px 0 10px;}
+  .chips{display:flex; justify-content:center; gap:8px; flex-wrap:wrap;}
+  .chip{padding:6px 14px; border-radius:999px; font-size:14px; font-weight:700; background:var(--soft); color:var(--gray);}
+  .chip.on{background:var(--green); color:#fff;}
+
+  .calc{background:var(--soft); border-radius:14px; padding:10px 16px; margin:8px 0; font-size:15px; line-height:1.8; min-height:56px;}
+  .calc .sum{font-weight:700;}
+  .answer{font-size:19px; font-weight:700; text-align:center; margin:10px 0; min-height:28px; animation:pop .3s ease;}
+  .answer.yes{color:var(--green);}
+  .answer.no{color:var(--gray);}
+  @keyframes pop{from{transform:scale(.85); opacity:0;} to{transform:scale(1); opacity:1;}}
+  .judge-bar{display:flex; gap:10px; margin-top:8px;}
+  .judge-btn{flex:1; padding:16px; border-radius:14px; font-size:17px; font-weight:700; color:#fff;}
+  .judge-btn.right{background:var(--green);}
+  .judge-btn.wrong{background:var(--red);}
+  .judge-btn:disabled{opacity:.35;}
+  .fb{border-radius:14px; padding:12px 14px; font-size:14.5px; line-height:1.7; margin:10px 0; animation:pop .25s ease;}
+  .fb.good{background:#E9F4EC; border:2px solid var(--green);}
+  .fb.bad{background:#FBE9E4; border:2px solid var(--red);}
+  .next-row{margin-top:6px;}
+  .streak-dots{text-align:center; font-size:18px; letter-spacing:4px; margin:4px 0 0;}
+  .hint{font-size:13px; color:var(--gray); text-align:center; margin:8px 0 0;}
+
+  /* 覆盖层 */
+  .overlay{position:fixed; inset:0; background:rgba(51,38,26,.55); z-index:50;
+    display:flex; align-items:center; justify-content:center; padding:20px;}
+  .ov-card{background:var(--cream); border-radius:20px; padding:22px 20px; width:100%; max-width:440px;
+    max-height:86vh; overflow-y:auto; animation:pop .3s ease;}
+  .ov-card h2{font-size:22px; margin-bottom:8px;}
+  .ov-card p{font-size:14.5px; line-height:1.8; margin:8px 0;}
+  .ov-card .tell{background:#fff; border-left:4px solid var(--yellow); border-radius:8px;
+    padding:10px 12px; font-size:14px; line-height:1.7; margin:10px 0;}
+
+  /* 证书 */
+  .cert{background:#fff; border:3px solid var(--yellow); border-radius:20px; padding:24px 18px; text-align:center; margin:14px 0;}
+  .cert h2{font-size:24px; color:var(--orange); margin-bottom:4px;}
+  .cert .cname{font-size:20px; font-weight:700; margin:12px 0 4px;}
+  .cert .csub{font-size:13px; color:var(--gray); line-height:1.8;}
+  .badges{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:12px 0;}
+  .badge{background:var(--soft); border:2px solid var(--yellow); border-radius:14px; padding:8px 12px; font-size:14px; font-weight:700;}
+  .badge .be{display:block; font-size:24px;}
+  .review{text-align:left; font-size:14px; line-height:1.9;}
+  .review li{margin:6px 0;}
+  .name-row{display:flex; gap:8px; margin:12px 0;}
+  .name-row input{flex:1; border:2px solid var(--line); border-radius:12px; padding:12px 14px;
+    font-size:16px; font-family:inherit; background:#fff; color:var(--ink);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 首页 -->
+  <div id="scr-home">
+    <div class="hero">
+      <div class="emo">🍎🤖</div>
+      <div class="kicker">AI 十哲 · 第二课</div>
+      <h1>教机器认苹果</h1>
+      <div class="tag">感知机训练营 · 答错就调分，越错越聪明</div>
+    </div>
+    <button class="big-btn" id="btn-start">🎓 开学！训练机器人小感
+      <span class="sub">小感认东西靠打分——你是它的老师，它答错了就告诉它，看它自己调分数！</span>
+    </button>
+    <div class="card howto">
+      <b>这是什么？</b><br>
+      1958 年，科学家罗森布拉特造出了「感知机」：给每条线索定一个重要分（权重），加起来超过分数线就回答「是」；答错了就调分——这是 AI 第一次学会<b>从错误中学习</b>。<br>
+      你将亲手训练它：认苹果、认橙子，最后还有一道<b>神秘果大魔王题</b>等着你……
+    </div>
+    <div class="footer-note">【和孩子一起学AI】社群亲子课配套游戏<br>无需联网 · 双击即玩</div>
+  </div>
+
+  <!-- 训练场 -->
+  <div id="scr-train" class="hidden">
+    <div class="hud">
+      <span class="lvl" id="t-lvl">第 1 关</span>
+      <span class="pill" id="t-goal">连对 0 / 3</span>
+    </div>
+    <div class="robot-box">
+      <div class="robot-head">
+        <span class="robot-face" id="robot-face">🤖</span>
+        <div>
+          <div class="robot-name">机器人小感</div>
+          <div class="robot-say" id="robot-say">老师好！我准备好打分啦</div>
+        </div>
+      </div>
+      <div id="wbars"></div>
+      <div class="theta-row">
+        <span class="theta-label">📏 分数线</span>
+        <span class="theta-val" id="theta-val">3 分</span>
+        <span class="theta-note">总分 ≥ 分数线 → 回答「是」</span>
+      </div>
+    </div>
+    <div class="fruit-card">
+      <div class="fruit-emo" id="fruit-emo">🍎</div>
+      <div class="fruit-name" id="fruit-name">苹果</div>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="calc" id="calc">小感正在打分……</div>
+    <div class="answer" id="answer"></div>
+    <div class="judge-bar">
+      <button class="judge-btn right" id="btn-right" disabled>✅ 答对了</button>
+      <button class="judge-btn wrong" id="btn-wrong" disabled>❌ 答错了</button>
+    </div>
+    <div class="streak-dots" id="streak"></div>
+    <div class="fb hidden" id="fb"></div>
+    <div class="next-row hidden" id="next-row">
+      <button class="big-btn yellow" id="btn-nextcard">下一张卡片 ➜</button>
+    </div>
+    <div class="hint">你是老师：小感回答后，告诉它对还是错</div>
+  </div>
+
+  <!-- 结算 -->
+  <div id="scr-result" class="hidden">
+    <div class="hero">
+      <div class="emo">🏆</div>
+      <div class="kicker">训练营毕业</div>
+      <h1>感知机训练师证书</h1>
+    </div>
+    <div class="name-row">
+      <input id="cert-name" maxlength="12" placeholder="写上你的名字">
+      <button class="big-btn yellow" id="cert-go" style="width:auto; margin:0; padding:12px 18px; font-size:15px;">盖章</button>
+    </div>
+    <div class="cert">
+      <h2>🎖️ 感知机训练师证书</h2>
+      <div class="csub">兹证明</div>
+      <div class="cname" id="cert-who">＿＿＿＿同学</div>
+      <div class="csub" id="cert-desc">亲手训练机器人小感学会了认苹果、认橙子<br>并发现了打分器「永远学不会的题」</div>
+      <div class="badges" id="cert-badges"></div>
+      <div class="csub" id="cert-date"></div>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--orange); margin-bottom:6px;">📒 复盘：你今天教会的三件事</h3>
+      <ul class="review" style="padding-left:20px; margin:8px 0;">
+        <li><b>重要分（权重）</b>：每条线索有多重要——「有果柄」比「红不红」更能分辨苹果和西红柿。</li>
+        <li><b>从错误中学习</b>：小感不背定义，答错一次调一次分——错题本原来这么厉害。</li>
+        <li><b>天花板</b>：打分器只会「画一条直线分两堆」，遇到「只能占一样」的神秘果就永远学不会——这道题后来把科学家也困了十几年！</li>
+      </ul>
+    </div>
+    <button class="big-btn" id="btn-again">🔁 再训一次（小感会忘掉重来）</button>
+    <button class="big-btn green" id="btn-home">🏠 回首页</button>
+    <div class="footer-note">下一课预告：1997 年 · LSTM——给 AI 装上记忆力</div>
+  </div>
+
+</div>
+
+<div class="overlay hidden" id="overlay">
+  <div class="ov-card" id="ov-card"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+(function(){
+'use strict';
+
+/* ============ 关卡数据 ============
+ * feats: 线索名  theta: 分数线  w0: 初始权重
+ * cards: {emo, name, x:[0/1...], t: 1=是 0=不是}
+ * 学习规则（真·感知机）：答错时 w[i] += (t - y) * x[i]，范围 0-5
+ * ================================== */
+var LEVELS = [
+  {
+    name:'第 1 关 · 认苹果', target:'苹果',
+    intro:'小感刚出生，什么都不会。你来教它认苹果——它答错了就告诉它，看它自己调分！',
+    goal:'连续答对 3 张就过关',
+    feats:['🔴 红','⭕ 圆','🌿 有柄'],
+    theta:3, w0:[0,0,0],
+    cards:[
+      {emo:'🍎', name:'苹果',   x:[1,1,1], t:1},
+      {emo:'🍅', name:'西红柿', x:[1,1,0], t:0},
+      {emo:'🍏', name:'青苹果', x:[0,1,1], t:1},
+      {emo:'🏀', name:'篮球',   x:[0,1,0], t:0},
+      {emo:'🍓', name:'草莓',   x:[1,0,0], t:0},
+      {emo:'🏮', name:'红灯笼', x:[1,1,0], t:0},
+      {emo:'🍎', name:'大苹果', x:[1,1,1], t:1}
+    ],
+    passTell:'🏆 小感毕业了！看看它的分数：<b>有果柄</b>被调到了最高分——它自己发现了「认苹果最关键的线索」！'
+  },
+  {
+    name:'第 2 关 · 认橙子', target:'橙子',
+    intro:'难度升级！这次的混淆水果更多：柿子也橙也圆、南瓜也橙皮也厚……分数线是 6 分，看小感要错几次才能学会。',
+    goal:'连续答对 3 张就过关',
+    feats:['🟠 橙色','⭕ 圆','🧅 皮厚'],
+    theta:6, w0:[0,0,0],
+    cards:[
+      {emo:'🍊', name:'橙子',   x:[1,1,1], t:1},
+      {emo:'🍅', name:'柿子',   x:[1,1,0], t:0},
+      {emo:'🍊', name:'甜橙',   x:[1,1,1], t:1},
+      {emo:'🎃', name:'南瓜',   x:[1,0,1], t:0},
+      {emo:'🍊', name:'蜜橙',   x:[1,1,1], t:1},
+      {emo:'🍋', name:'柠檬',   x:[0,0,1], t:0},
+      {emo:'🥕', name:'胡萝卜', x:[1,0,0], t:0},
+      {emo:'🏀', name:'篮球',   x:[0,1,0], t:0}
+    ],
+    passTell:'🏆 又毕业了！这次它错了好几次才学会——<b>线索越像，需要的错题越多</b>。学习本来就是这样！'
+  },
+  {
+    name:'第 3 关 · 神秘果大魔王', target:'神秘果',
+    intro:'终极挑战！神秘果的规矩很奇怪：「红」和「圆」<b>只能占一样</b>，才算神秘果。分数线 2 分。去教教看吧……',
+    goal:'这道题好像哪里不对劲？',
+    feats:['🔴 红','⭕ 圆'],
+    theta:2, w0:[1,1],
+    boss:true,
+    cards:[
+      {emo:'🟥', name:'红方块', x:[1,0], t:1},
+      {emo:'🟢', name:'绿圆片', x:[0,1], t:1},
+      {emo:'🍎', name:'红圆果', x:[1,1], t:0},
+      {emo:'🟥', name:'红纸条', x:[1,0], t:1},
+      {emo:'🟢', name:'绿圆饼', x:[0,1], t:1},
+      {emo:'🍎', name:'红圆球', x:[1,1], t:0}
+    ],
+    bossTell:'🤯 <b>发现了！这道题小感永远学不会。</b><br>打分器只会「画一条直线分两堆」——可「只能占一样」的规矩，一条直线怎么也分不开。<br>1969 年，科学家也证明了这件事，AI 因此难过了好多年……直到会「拐弯」的神经网络出现！<br><br>你没有失败——<b>发现「学不会」，本身就是这节课最大的收获。</b>'
+  }
+];
+
+var ROBOT_SAY = {
+  start:['老师好！我准备好打分啦','嗯……让我算算','这道题我会！……吧'],
+  right:['耶！我猜对啦！','我变聪明了对不对！','老师教得好！'],
+  wrong:['啊？错了……我调调分','别灰心我，我马上改','哦哦！原来这条线索更重要','我记住这次错误了！'],
+  stuck:['咦……怎么又错了','我的分到底该调给谁呀','老师，这题是不是有问题……']
+};
+
+/* ============ 状态 ============ */
+var S = {
+  scr:'scr-home', level:0, ci:0, w:[], streak:0, mistakes:0,
+  answered:false, judged:false, curY:0, curScore:0, badges:{}
+};
+var AUTOTEST = location.search.indexOf('autotest') >= 0;
+
+function $(id){ return document.getElementById(id); }
+function show(id){
+  ['scr-home','scr-train','scr-result'].forEach(function(s){
+    $(s).classList.toggle('hidden', s !== id);
+  });
+  S.scr = id; window.scrollTo(0,0);
+}
+function toast(msg){
+  var t = $('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 1800);
+}
+function award(key, name, emo){
+  if(!S.badges[key]){ S.badges[key] = {name:name, emo:emo}; toast('获得徽章：' + emo + ' ' + name); }
+}
+function showOverlay(html){ $('ov-card').innerHTML = html; $('overlay').classList.remove('hidden'); }
+function hideOverlay(){ $('overlay').classList.add('hidden'); }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+/* ============ 训练流程 ============ */
+function startGame(){
+  S.level = 0; S.badges = {};
+  levelIntro();
+}
+function levelIntro(){
+  var L = LEVELS[S.level];
+  showOverlay(
+    '<div class="kicker">感知机训练营</div>' +
+    '<h2>' + L.name + '</h2>' +
+    '<p>' + L.intro + '</p>' +
+    '<p style="color:var(--gray); font-size:13px;">' + L.goal + '</p>' +
+    '<button class="big-btn" id="ov-go">开始训练 🎓</button>'
+  );
+  $('ov-go').addEventListener('click', function(){
+    hideOverlay(); startLevel(); show('scr-train');
+  });
+}
+function startLevel(){
+  var L = LEVELS[S.level];
+  S.ci = 0; S.streak = 0; S.mistakes = 0;
+  S.w = L.w0.slice();
+  $('t-lvl').textContent = L.name;
+  $('theta-val').textContent = L.theta + ' 分';
+  renderBars();
+  showCard();
+}
+function renderBars(bumpIdx){
+  var L = LEVELS[S.level];
+  var box = $('wbars'); box.innerHTML = '';
+  L.feats.forEach(function(f, i){
+    var row = document.createElement('div');
+    row.className = 'wbar-row' + (bumpIdx === i ? ' bump' : '');
+    row.innerHTML = '<span class="wbar-label">' + f + '</span>' +
+      '<div class="wbar"><i style="width:' + (S.w[i]/5*100) + '%"></i></div>' +
+      '<span class="wbar-val">' + S.w[i] + ' 分</span>';
+    box.appendChild(row);
+  });
+}
+function showCard(){
+  var L = LEVELS[S.level];
+  var c = L.cards[S.ci % L.cards.length];
+  S.answered = false; S.judged = false;
+  $('fruit-emo').textContent = c.emo;
+  $('fruit-name').textContent = c.name;
+  var chips = $('chips'); chips.innerHTML = '';
+  L.feats.forEach(function(f, i){
+    var ch = document.createElement('span');
+    ch.className = 'chip' + (c.x[i] ? ' on' : '');
+    ch.textContent = (c.x[i] ? '✓ ' : '✗ ') + f;
+    chips.appendChild(ch);
+  });
+  $('calc').textContent = '小感正在打分……';
+  $('answer').textContent = '';
+  $('fb').classList.add('hidden');
+  $('next-row').classList.add('hidden');
+  $('btn-right').disabled = true; $('btn-wrong').disabled = true;
+  $('robot-say').textContent = S.level === 2 && S.mistakes >= 3 ? pick(ROBOT_SAY.stuck) : pick(ROBOT_SAY.start);
+  updateHud();
+  setTimeout(robotAnswer, AUTOTEST ? 0 : 900);
+}
+function robotAnswer(){
+  var L = LEVELS[S.level];
+  var c = L.cards[S.ci % L.cards.length];
+  var parts = [], score = 0;
+  L.feats.forEach(function(f, i){
+    var v = c.x[i] * S.w[i];
+    score += v;
+    parts.push(c.x[i] ? (S.w[i]) : '0');
+  });
+  S.curScore = score;
+  S.curY = score >= L.theta ? 1 : 0;
+  S.answered = true;
+  $('calc').innerHTML = '打分：' + parts.join(' ＋ ') + ' ＝ <span class="sum">' + score + ' 分</span>' +
+    '　（分数线 ' + L.theta + ' 分）';
+  var a = $('answer');
+  a.className = 'answer ' + (S.curY ? 'yes' : 'no');
+  a.textContent = S.curY ? '「这是' + LEVELS[S.level].target + '！」'
+                         : '「这不是' + LEVELS[S.level].target + '。」';
+  $('btn-right').disabled = false; $('btn-wrong').disabled = false;
+}
+function judge(saidRight){
+  if(!S.answered || S.judged) return;
+  S.judged = true;
+  var L = LEVELS[S.level];
+  var c = L.cards[S.ci % L.cards.length];
+  var correct = (saidRight && S.curY === c.t) || (!saidRight && S.curY !== c.t);
+  // 孩子判错了（把对的判错/错的判对）
+  if(!correct){
+    var fb0 = $('fb');
+    fb0.className = 'fb bad';
+    fb0.innerHTML = '<b>老师判错啦！</b>这是「' + c.name + '」，' +
+      (c.t ? '它真的是目标哦' : '它真的不是目标') + '——再想想？';
+    S.judged = false;
+    return;
+  }
+  $('btn-right').disabled = true; $('btn-wrong').disabled = true;
+  if(S.curY === c.t){
+    S.streak++;
+    $('robot-say').textContent = pick(ROBOT_SAY.right);
+    var fb = $('fb');
+    fb.className = 'fb good';
+    fb.innerHTML = '<b>答对啦！</b>小感不用调分，继续保持。连对 ' + S.streak + ' / 3';
+    afterJudged();
+  }else{
+    S.streak = 0; S.mistakes++;
+    // 感知机学习规则：w += (t - y) * x
+    var bump = -1;
+    for(var i = 0; i < S.w.length; i++){
+      var nw = S.w[i] + (c.t - S.curY) * c.x[i];
+      nw = Math.max(0, Math.min(5, nw));
+      if(nw !== S.w[i]) bump = i;
+      S.w[i] = nw;
+    }
+    $('robot-say').textContent = pick(ROBOT_SAY.wrong);
+    renderBars(bump);
+    var dir = c.t === 1 ? '加分（它错过了目标）' : '减分（它认错了东西）';
+    var fb2 = $('fb');
+    fb2.className = 'fb bad';
+    fb2.innerHTML = '<b>答错了，调分！</b>小感给相关线索' + dir + '——看上面的分数条变化！错 ' + S.mistakes + ' 次啦';
+    afterJudged();
+  }
+}
+function afterJudged(){
+  updateHud();
+  var L = LEVELS[S.level];
+  if(L.boss){
+    // 大魔王关：cards 走完就揭晓
+    if(S.ci >= L.cards.length - 1){
+      setTimeout(bossReveal, AUTOTEST ? 0 : 1200);
+      return;
+    }
+  }else if(S.streak >= 3){
+    setTimeout(levelPass, AUTOTEST ? 0 : 900);
+    return;
+  }
+  $('next-row').classList.remove('hidden');
+}
+function updateHud(){
+  var L = LEVELS[S.level];
+  $('t-goal').textContent = L.boss ? ('错 ' + S.mistakes + ' 次') : ('连对 ' + S.streak + ' / 3');
+  var dots = '';
+  for(var i = 0; i < 3; i++) dots += i < S.streak ? '🌟' : '◽';
+  $('streak').textContent = L.boss ? '' : dots;
+}
+function levelPass(){
+  var L = LEVELS[S.level];
+  if(S.level === 0) award('coach1', '启蒙教练', '🌱');
+  if(S.level === 1) award('coach2', '进阶教练', '🔥');
+  var last = S.level >= LEVELS.length - 2;
+  showOverlay(
+    '<h2>' + L.name.replace('第', '第').split('·')[0] + ' 通关！</h2>' +
+    '<div class="tell">' + L.passTell + '</div>' +
+    '<button class="big-btn" id="ov-next">' + (last ? '挑战大魔王题 😈' : '下一关 ➜') + '</button>'
+  );
+  $('ov-next').addEventListener('click', function(){
+    hideOverlay(); S.level++; levelIntro();
+  });
+}
+function bossReveal(){
+  var L = LEVELS[S.level];
+  award('truth', '真相发现者', '💡');
+  showOverlay(
+    '<h2>😈 大魔王现形！</h2>' +
+    '<div class="tell">' + L.bossTell + '</div>' +
+    '<button class="big-btn" id="ov-done">领取训练师证书 🏆</button>'
+  );
+  $('ov-done').addEventListener('click', function(){ hideOverlay(); showResult(); });
+}
+
+/* ============ 结算证书 ============ */
+function showResult(){
+  var bb = $('cert-badges');
+  bb.innerHTML = '';
+  var keys = Object.keys(S.badges);
+  if(keys.length === 0){
+    bb.innerHTML = '<div class="badge"><span class="be">🌱</span>参与之星</div>';
+  }else{
+    keys.forEach(function(k){
+      var d = document.createElement('div');
+      d.className = 'badge';
+      d.innerHTML = '<span class="be">' + S.badges[k].emo + '</span>' + S.badges[k].name;
+      bb.appendChild(d);
+    });
+  }
+  var now = new Date();
+  $('cert-date').textContent = '【和孩子一起学AI】· AI十哲第二课 · ' +
+    now.getFullYear() + ' 年 ' + (now.getMonth()+1) + ' 月 ' + now.getDate() + ' 日';
+  show('scr-result');
+}
+function stampName(){
+  var n = $('cert-name').value.trim();
+  if(!n){ toast('先写上你的名字哦'); return; }
+  $('cert-who').textContent = n + ' 同学';
+  toast('盖章成功！截图晒到群里吧 📸');
+}
+
+/* ============ 软重启（微信里 location.reload 会被拦截，不用它） ============ */
+function softRestart(){
+  S.level = 0; S.ci = 0; S.streak = 0; S.mistakes = 0;
+  $('cert-name').value = '';
+  $('cert-who').textContent = '＿＿＿＿同学';
+  hideOverlay();
+  startGame();
+}
+function goHome(){
+  hideOverlay();
+  show('scr-home');
+}
+
+/* ============ 事件绑定 ============ */
+$('btn-start').addEventListener('click', startGame);
+$('btn-right').addEventListener('click', function(){ judge(true); });
+$('btn-wrong').addEventListener('click', function(){ judge(false); });
+$('btn-nextcard').addEventListener('click', function(){ S.ci++; showCard(); });
+$('cert-go').addEventListener('click', stampName);
+$('btn-again').addEventListener('click', softRestart);
+$('btn-home').addEventListener('click', goHome);
+
+/* 调试句柄：自动通关回归用（含当前卡片的真实答案 t 与小感的回答 y） */
+window.__DBG = { state:function(){
+  var L = LEVELS[S.level];
+  var c = L.cards[S.ci % L.cards.length];
+  return { scr:S.scr, level:S.level, ci:S.ci, streak:S.streak, mistakes:S.mistakes,
+    t:c.t, y:S.curY, answered:S.answered, badges:Object.keys(S.badges).length,
+    overlay:!$('overlay').classList.contains('hidden') };
+}};
+
+})();
+</script>
+</body>
+</html>
